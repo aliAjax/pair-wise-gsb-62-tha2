@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon'
 import { MatSidenavModule } from '@angular/material/sidenav'
 import { MatToolbarModule } from '@angular/material/toolbar'
 import { Store } from '@ngrx/store'
+import { TailingsApiService } from './services/tailings-api.service'
 import { TailingsActions } from './store/tailings.actions'
 
 @Component({
@@ -22,7 +23,7 @@ import { TailingsActions } from './store/tailings.actions'
           <a routerLink="/anomalies" routerLinkActive="active"><span>异常处置</span><small>复核与会签</small></a>
           <a routerLink="/audit" routerLinkActive="active"><span>审计追溯</span><small>历史版本</small></a>
         </nav>
-        <div class="side-state"><span>原始读数保护</span><b>只读且不可覆盖</b><small>处置修订单独版本化</small></div>
+        <div class="side-state"><span>统一版本依据</span><b id="basis-version">V{{ currentBasis }}</b><small>计划、阈值、读数和会签同版本</small></div>
       </mat-sidenav>
       <mat-sidenav-content>
         <mat-toolbar class="topbar"><div><span>矿山安全运营中心 / 尾矿库</span><h1>监测计划与异常处置审阅</h1></div><button mat-button (click)="reset()">恢复演示数据</button></mat-toolbar>
@@ -50,6 +51,18 @@ import { TailingsActions } from './store/tailings.actions'
 })
 export class AppComponent implements OnInit {
   private readonly store = inject(Store)
-  ngOnInit(): void { this.store.dispatch(TailingsActions.loadDataset()) }
-  reset(): void { this.store.dispatch(TailingsActions.resetDemo()) }
+  private readonly api = inject(TailingsApiService)
+  readonly currentBasis$ = this.store.select((state: { tailings: { dataset: { currentBasisVersion: number } } }) => state.tailings.dataset.currentBasisVersion)
+  get currentBasis(): number {
+    let value = 0
+    this.currentBasis$.subscribe((next) => { value = next }).unsubscribe()
+    return value
+  }
+  ngOnInit(): void {
+    this.store.dispatch(TailingsActions.hydrateDataset({ dataset: this.api.readStoredDataset(), pendingBatch: this.api.readPendingBatch() }))
+  }
+  reset(): void {
+    this.store.dispatch(TailingsActions.resetDemo())
+    this.store.dispatch(TailingsActions.hydrateDataset({ dataset: null, pendingBatch: null }))
+  }
 }

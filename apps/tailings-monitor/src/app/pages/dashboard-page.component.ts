@@ -5,23 +5,25 @@ import { MatTableModule } from '@angular/material/table'
 import { Store } from '@ngrx/store'
 import { map } from 'rxjs'
 import { SpatialMapComponent } from '../components/spatial-map.component'
+import { WriteBannerComponent } from '../components/write-banner.component'
 import { selectAnomalies, selectDataset, selectPoints } from '../store/tailings.selectors'
 
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatTableModule, SpatialMapComponent],
+  imports: [CommonModule, MatButtonModule, MatTableModule, SpatialMapComponent, WriteBannerComponent],
   template: `
     <section class="page">
+      <app-write-banner />
       <div class="metrics">
         <article><span>监测点</span><strong>{{ pointCount$ | async }}</strong><small>位移、水位、渗流、降雨</small></article>
-        <article><span>异常点</span><strong>{{ abnormalCount$ | async }}</strong><small>阈值引擎自动标记</small></article>
+        <article><span>异常点</span><strong>{{ abnormalCount$ | async }}</strong><small>阈值引擎按当前依据重算</small></article>
         <article><span>待审异常</span><strong>{{ openAnomalyCount$ | async }}</strong><small>未完成处置闭环</small></article>
-        <article><span>阈值版本</span><strong>{{ thresholdVersion$ | async }}</strong><small>每次调整独立留痕</small></article>
+        <article><span>统一依据</span><strong>V{{ (dataset$ | async)?.currentBasisVersion }}</strong><small>计划/阈值/读数/会签一致</small></article>
       </div>
       <app-spatial-map [points]="(points$ | async) ?? []" />
       <div class="threshold-band">
-        <div><h2>阈值与运行方式</h2><p>报警阈值、变化速率和监测频率按坝体分区执行。</p></div>
+        <div><h2>当前版本依据：{{ (activePlan$ | async)?.name }}</h2><p>V{{ (dataset$ | async)?.currentBasisVersion }} · 生效时间 {{ (activePlan$ | async)?.effectiveAt.replace('T', ' ') }} · {{ (activePlan$ | async)?.frequency }}</p></div>
         <table mat-table [dataSource]="(dataset$ | async)?.thresholds ?? []">
           <ng-container matColumnDef="type"><th mat-header-cell *matHeaderCellDef>类型</th><td mat-cell *matCellDef="let row">{{ row.type }}</td></ng-container>
           <ng-container matColumnDef="warning"><th mat-header-cell *matHeaderCellDef>预警</th><td mat-cell *matCellDef="let row">{{ row.warning }} {{ row.unit }}</td></ng-container>
@@ -46,9 +48,9 @@ export class DashboardPageComponent {
   readonly points$ = this.store.select(selectPoints)
   readonly anomalies$ = this.store.select(selectAnomalies)
   readonly dataset$ = this.store.select(selectDataset)
+  readonly activePlan$ = this.dataset$.pipe(map((dataset) => dataset.plans.find((plan) => plan.active) ?? dataset.plans[0]))
   readonly pointCount$ = this.points$.pipe(map((points) => points.length))
   readonly abnormalCount$ = this.points$.pipe(map((points) => points.filter((point) => point.status !== '正常').length))
   readonly openAnomalyCount$ = this.anomalies$.pipe(map((items) => items.filter((item) => item.status !== '已关闭').length))
-  readonly thresholdVersion$ = this.dataset$.pipe(map((dataset) => dataset.thresholds.reduce((sum, item) => sum + item.version, 0)))
   readonly thresholdColumns = ['type', 'warning', 'alarm', 'rate', 'version']
 }

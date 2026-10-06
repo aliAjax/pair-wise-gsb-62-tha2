@@ -1,16 +1,20 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store'
-import type { AuditEntry, DispositionPlan, ExpertOpinion, FieldReview, TailingsDataset } from '../domain'
+import type { ActivateBasisPayload, AuditEntry, DispositionPlan, ExpertOpinion, FieldReview, TailingsDataset, WriteBatch } from '../domain'
 
 export const TailingsActions = createActionGroup({
   source: 'Tailings',
   events: {
-    'Load Dataset': emptyProps(),
+    'Hydrate Dataset': props<{ dataset: TailingsDataset | null; pendingBatch: WriteBatch | null }>(),
     'Load Dataset Success': props<{ dataset: TailingsDataset }>(),
     'Load Dataset Failure': props<{ error: string }>(),
-    'Submit Field Review': props<{ anomalyId: string; review: FieldReview }>(),
+    'Request Write': props<{ batch: WriteBatch }>(),
+    'Write Succeeded': props<{ batch: WriteBatch; dataset: TailingsDataset }>(),
+    'Write Failed': props<{ batch: WriteBatch; error: string }>(),
+    'Retry Pending Write': emptyProps(),
+    'Discard Pending Write': emptyProps(),
+    'Clear Write Conflict': emptyProps(),
     'Add Expert Opinion': props<{ anomalyId: string; opinion: ExpertOpinion }>(),
     'Save Disposition Plan': props<{ anomalyId: string; plan: DispositionPlan }>(),
-    'Approve Plan': props<{ anomalyId: string; approver: string; note: string }>(),
     'Close Anomaly': props<{ anomalyId: string; note: string }>(),
     'Create Emergency Link': props<{ anomalyId: string; note: string }>(),
     'Select Anomaly': props<{ anomalyId: string }>(),
@@ -20,3 +24,6 @@ export const TailingsActions = createActionGroup({
     'Reset Demo': emptyProps()
   }
 })
+
+export type ActivateBasisForm = ActivateBasisPayload
+export type FieldReviewDraft = FieldReview
